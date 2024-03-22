@@ -4,13 +4,13 @@ on:
     branches:
       - main
       - stage
-    paths:  
-      - terraform/**
+    # paths:  
+    #   - terraform/**
   pull_request:
     branches:
       - main
-    paths:
-      - terraform/**
+    # paths:
+    #   - terraform/**
 
 env:
  # Credentials for deployment to AWS
@@ -19,6 +19,8 @@ env:
  # S3 bucket for the Terraform state
  BUCKET_TF_STATE: ${{ secrets.BUCKET_TF_STATE}}
  AWS_REGION: us-east-2
+ PUB_KEY: ${{ secrets.PUB_KEY }}
+ PRIVATE_KEY : ${{ secrets.PRIVATE_KEY }}
 
 jobs:
    terraform:
@@ -30,6 +32,7 @@ jobs:
          working-directory: ./terraform
 
      steps:
+
        - name: Checkout source code 
          uses: actions/checkout@v4
 
@@ -38,11 +41,37 @@ jobs:
          #with:
          #  terraform_version: 1.6.3
 
+       - name: create varibale file
+         run : |
+           cat <<EOF > variables.tf
+           variable "PUB_KEY" {
+            description = "PUB_KEY"
+            type        = string
+            default     = <<EOF
+            $PUB_KEY
+            EOF
+           }
+
+           variable "PRIVATE_KEY" {
+             description = "PRIVATE_KEY"
+             type        = string
+             default     = <<EOF
+             $PRIVATE_KEY
+             EOF
+           }
+           EOF
+      
+       - name: Show File Contents
+         run: cat variables.tf
+
        - name: Terraform init
          id: init
          run: terraform init -backend-config="bucket=$BUCKET_TF_STATE"
 
        - name: Terraform format
+         run: terraform fmt
+
+       - name: Terraform format check
          id: fmt
          run: terraform fmt -check
 
